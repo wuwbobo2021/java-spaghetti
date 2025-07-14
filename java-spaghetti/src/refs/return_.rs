@@ -11,12 +11,12 @@ use crate::ReferenceType;
 ///
 /// FFI safe where a jobject is safe, assuming you match your types correctly.
 #[repr(transparent)]
-pub struct Return<'env, T: ReferenceType> {
+pub struct Return<'env, T: ReferenceType<'env>> {
     object: jobject,
     _class: PhantomData<&'env T>,
 }
 
-impl<'env, T: ReferenceType> Return<'env, T> {
+impl<'env, T: ReferenceType<'env>> Return<'env, T> {
     pub unsafe fn from_raw(object: jobject) -> Self {
         Self {
             object,
@@ -36,7 +36,7 @@ impl<'env, T: ReferenceType> Return<'env, T> {
     }
 }
 
-impl<'env, T: ReferenceType> Default for Return<'env, T> {
+impl<'env, T: ReferenceType<'env>> Default for Return<'env, T> {
     fn default() -> Self {
         Self::null()
     }

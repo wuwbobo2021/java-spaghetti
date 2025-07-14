@@ -68,8 +68,9 @@ impl<'a> Field<'a> {
                     emit_reject_reasons.push("ERROR:  missing class for field type");
                 }
                 if let Ok(fqn) = context.java_to_rust_path(class, mod_) {
-                    rust_set_type_buffer = format!("impl ::java_spaghetti::AsArg<{}>", &fqn);
-                    rust_get_type_buffer = format!("::std::option::Option<::java_spaghetti::Local<'env, {}>>", &fqn);
+                    rust_set_type_buffer = format!("impl ::java_spaghetti::AsArg<{}<'env>>", &fqn);
+                    rust_get_type_buffer =
+                        format!("::std::option::Option<::java_spaghetti::Local<'env, {}<'env>>>", &fqn);
                     (rust_set_type_buffer.as_str(), rust_get_type_buffer.as_str())
                 } else {
                     emit_reject_reasons.push("ERROR:  Unable to resolve class FQN");
@@ -79,23 +80,23 @@ impl<'a> Field<'a> {
             field::Descriptor::Array { levels, inner } => {
                 let mut buffer = String::new();
                 for _ in 0..(levels - 1) {
-                    buffer.push_str("::java_spaghetti::ObjectArray<");
+                    buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                 }
                 match inner {
-                    field::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray"),
-                    field::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray"),
-                    field::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray"),
-                    field::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray"),
-                    field::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray"),
-                    field::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray"),
-                    field::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray"),
-                    field::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray"),
+                    field::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray<'env>"),
+                    field::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray<'env>"),
+                    field::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray<'env>"),
+                    field::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray<'env>"),
+                    field::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray<'env>"),
+                    field::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray<'env>"),
+                    field::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray<'env>"),
+                    field::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray<'env>"),
                     field::BasicType::Class(class) => {
                         if !context.all_classes.contains_key(class.as_str()) {
                             emit_reject_reasons.push("ERROR:  missing class for field type");
                         }
 
-                        buffer.push_str("::java_spaghetti::ObjectArray<");
+                        buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                         match context.java_to_rust_path(class, mod_) {
                             Ok(path) => buffer.push_str(path.as_str()),
                             Err(_) => {
@@ -104,8 +105,10 @@ impl<'a> Field<'a> {
                                 buffer.push_str("???");
                             }
                         }
+                        buffer.push_str("<'env>");
                         buffer.push_str(", ");
                         buffer.push_str(&context.throwable_rust_path(mod_));
+                        buffer.push_str("<'env>");
                         buffer.push('>');
                     }
                     field::BasicType::Void => {
@@ -117,6 +120,7 @@ impl<'a> Field<'a> {
                     // ObjectArray s
                     buffer.push_str(", ");
                     buffer.push_str(&context.throwable_rust_path(mod_));
+                    buffer.push_str("<'env>");
                     buffer.push('>');
                 }
 
@@ -177,7 +181,7 @@ impl<'a> Field<'a> {
         let env_param = if self.java.is_static() {
             "env: ::java_spaghetti::Env<'env>"
         } else {
-            "&'env self"
+            "&self"
         };
 
         let url = KnownDocsUrl::from_field(
@@ -229,7 +233,7 @@ impl<'a> Field<'a> {
                 }
                 writeln!(
                     out,
-                    "{}{}pub fn {}<'env>({}) -> {} {{",
+                    "{}{}pub fn {}({}) -> {} {{",
                     indent, &attributes, get, env_param, rust_get_type
                 )?;
                 writeln!(out, "{}    unsafe {{", indent)?;
@@ -267,11 +271,7 @@ impl<'a> Field<'a> {
 
                 // Setter
                 if !self.java.is_final() {
-                    let lifetimes = if field_fragment == "object" {
-                        "'env, 'obj"
-                    } else {
-                        "'env"
-                    };
+                    let lifetimes = if field_fragment == "object" { "'obj" } else { "" };
 
                     writeln!(out)?;
                     if let Some(url) = url {
@@ -321,7 +321,7 @@ impl<'a> Field<'a> {
             Err(_) => {
                 writeln!(
                     out,
-                    "{}{}pub fn get_{:?}<'env>({}) -> {} {{ ... }}",
+                    "{}{}pub fn get_{:?}({}) -> {} {{ ... }}",
                     indent,
                     &attributes,
                     self.java.name.as_str(),
@@ -331,7 +331,7 @@ impl<'a> Field<'a> {
                 if !self.java.is_final() {
                     writeln!(
                         out,
-                        "{}{}pub fn set_{:?}<'env>({}) -> {} {{ ... }}",
+                        "{}{}pub fn set_{:?}({}) -> {} {{ ... }}",
                         indent,
                         &attributes,
                         self.java.name.as_str(),

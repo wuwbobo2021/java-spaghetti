@@ -122,19 +122,25 @@ impl Struct {
         } else {
             writeln!(
                 out,
-                "#[repr(transparent)] {attributes}{visibility} struct {rust_name}(pub(crate) ::java_spaghetti::ObjectAndEnv);
-                unsafe impl ::java_spaghetti::ReferenceType for {rust_name} {{}}
+                "#[repr(transparent)] {attributes}{visibility} struct {rust_name}<'env>(pub(crate) ::java_spaghetti::ObjectAndEnv, ::std::marker::PhantomData<&'env ()>);
+                unsafe impl<'env> ::java_spaghetti::ReferenceType<'env> for {rust_name}<'env> {{}}
                 ",
             )?;
         }
         writeln!(
             out,
-            "unsafe impl ::java_spaghetti::JniType for {rust_name} {{
+            "unsafe impl<'env> ::java_spaghetti::JniType for {rust_name}<'env> {{
                 fn static_with_jni_type<R>(callback: impl FnOnce(&str) -> R) -> R {{
                     callback({:?})
                 }}
             }}",
             self.java.path.as_str().to_string() + "\0",
+        )?;
+        writeln!(
+            out,
+            "unsafe impl<'a, 'b> ::java_spaghetti::LifeCastTo<'a, 'b> for {rust_name}<'a> {{
+                type Target = {rust_name}<'b>;
+            }}",
         )?;
 
         // recursively visit all superclasses and superinterfaces.
@@ -149,7 +155,7 @@ impl Struct {
                     let rust_path = context.java_to_rust_path(path2.as_id(), &self.rust.mod_).unwrap();
                     writeln!(
                         out,
-                        "unsafe impl ::java_spaghetti::AssignableTo<{rust_path}> for {rust_name} {{}}"
+                        "unsafe impl<'env> ::java_spaghetti::AssignableTo<'env, {rust_path}<'env>> for {rust_name}<'env> {{}}"
                     )?;
                     queue.push(path2.clone());
                     visited.insert(path2.clone());
@@ -161,8 +167,8 @@ impl Struct {
             let super_path = context.java_to_rust_path(super_path.as_id(), &self.rust.mod_).unwrap();
             writeln!(
                 out,
-                "impl ::std::ops::Deref for {rust_name} {{
-                    type Target = {super_path};
+                "impl<'env> ::std::ops::Deref for {rust_name}<'env> {{
+                    type Target = {super_path}<'env>;
                     fn deref(&self) -> &Self::Target {{
                         unsafe {{ &*(self as *const Self as *const Self::Target) }}
                     }}
@@ -177,14 +183,14 @@ impl Struct {
             let implements_path = context.java_to_rust_path(interface.as_id(), &self.rust.mod_).unwrap();
             writeln!(
                 out,
-                "impl ::std::convert::AsRef<{implements_path}> for {rust_name} {{
-                    fn as_ref(&self) -> &{implements_path} {{
+                "impl<'env> ::std::convert::AsRef<{implements_path}<'env>> for {rust_name}<'env> {{
+                    fn as_ref(&self) -> &{implements_path}<'env> {{
                         unsafe {{ &*(self as *const Self as *const {implements_path}) }}
                     }}
                 }}"
             )?;
         }
-        writeln!(out, "impl {rust_name} {{")?;
+        writeln!(out, "impl<'env> {rust_name}<'env> {{")?;
 
         let mut id_repeats = HashMap::new();
 

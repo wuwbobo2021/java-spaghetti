@@ -95,7 +95,7 @@ impl<'a> Method<'a> {
         let mut params_decl = if self.java.is_constructor() || self.java.is_static() {
             String::from("__jni_env: ::java_spaghetti::Env<'env>")
         } else {
-            String::from("&'env self")
+            String::from("&self")
         };
 
         for (arg_idx, arg) in descriptor.arguments().enumerate() {
@@ -122,7 +122,7 @@ impl<'a> Method<'a> {
                     }
                     param_is_object = true;
                     match context.java_to_rust_path(class, mod_) {
-                        Ok(path) => format!("impl ::java_spaghetti::AsArg<{}>", path),
+                        Ok(path) => format!("impl ::java_spaghetti::AsArg<{}<'env>>", path),
                         Err(_) => {
                             emit_reject_reasons
                                 .push("ERROR:  Failed to resolve JNI path to Rust path for argument type");
@@ -133,22 +133,22 @@ impl<'a> Method<'a> {
                 method::Type::Array { levels, inner } => {
                     let mut buffer = "impl ::java_spaghetti::AsArg<".to_owned();
                     for _ in 0..(levels - 1) {
-                        buffer.push_str("::java_spaghetti::ObjectArray<");
+                        buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                     }
                     match inner {
-                        method::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray"),
-                        method::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray"),
-                        method::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray"),
-                        method::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray"),
-                        method::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray"),
-                        method::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray"),
-                        method::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray"),
-                        method::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray"),
+                        method::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray<'env>"),
+                        method::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray<'env>"),
+                        method::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray<'env>"),
+                        method::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray<'env>"),
+                        method::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray<'env>"),
+                        method::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray<'env>"),
+                        method::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray<'env>"),
+                        method::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray<'env>"),
                         method::BasicType::Class(class) => {
                             if !context.all_classes.contains_key(class.as_str()) {
                                 emit_reject_reasons.push("ERROR:  missing class for argument type");
                             }
-                            buffer.push_str("::java_spaghetti::ObjectArray<");
+                            buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                             match context.java_to_rust_path(class, mod_) {
                                 Ok(path) => buffer.push_str(path.as_str()),
                                 Err(_) => {
@@ -157,8 +157,10 @@ impl<'a> Method<'a> {
                                     buffer.push_str("???");
                                 }
                             }
+                            buffer.push_str("<'env>");
                             buffer.push_str(", ");
                             buffer.push_str(&context.throwable_rust_path(mod_));
+                            buffer.push_str("<'env>");
                             buffer.push('>');
                         }
                         method::BasicType::Void => {
@@ -170,6 +172,7 @@ impl<'a> Method<'a> {
                         // ObjectArray s
                         buffer.push_str(", ");
                         buffer.push_str(&context.throwable_rust_path(mod_));
+                        buffer.push_str("<'env>");
                         buffer.push('>');
                     }
                     buffer.push_str(">"); // AsArg
@@ -217,7 +220,7 @@ impl<'a> Method<'a> {
                     emit_reject_reasons.push("ERROR:  missing class for return type");
                 }
                 match context.java_to_rust_path(class, mod_) {
-                    Ok(path) => format!("::std::option::Option<::java_spaghetti::Local<'env, {}>>", path),
+                    Ok(path) => format!("::std::option::Option<::java_spaghetti::Local<'env, {}<'env>>>", path),
                     Err(_) => {
                         emit_reject_reasons.push("ERROR:  Failed to resolve JNI path to Rust path for return type");
                         format!("{:?}", class)
@@ -234,22 +237,22 @@ impl<'a> Method<'a> {
             method::Type::Array { levels, inner } => {
                 let mut buffer = "::std::option::Option<::java_spaghetti::Local<'env, ".to_owned();
                 for _ in 0..(levels - 1) {
-                    buffer.push_str("::java_spaghetti::ObjectArray<");
+                    buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                 }
                 match inner {
-                    method::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray"),
-                    method::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray"),
-                    method::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray"),
-                    method::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray"),
-                    method::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray"),
-                    method::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray"),
-                    method::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray"),
-                    method::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray"),
+                    method::BasicType::Boolean => buffer.push_str("::java_spaghetti::BooleanArray<'env>"),
+                    method::BasicType::Byte => buffer.push_str("::java_spaghetti::ByteArray<'env>"),
+                    method::BasicType::Char => buffer.push_str("::java_spaghetti::CharArray<'env>"),
+                    method::BasicType::Short => buffer.push_str("::java_spaghetti::ShortArray<'env>"),
+                    method::BasicType::Int => buffer.push_str("::java_spaghetti::IntArray<'env>"),
+                    method::BasicType::Long => buffer.push_str("::java_spaghetti::LongArray<'env>"),
+                    method::BasicType::Float => buffer.push_str("::java_spaghetti::FloatArray<'env>"),
+                    method::BasicType::Double => buffer.push_str("::java_spaghetti::DoubleArray<'env>"),
                     method::BasicType::Class(class) => {
                         if !context.all_classes.contains_key(class.as_str()) {
                             emit_reject_reasons.push("ERROR:  missing class for return type");
                         }
-                        buffer.push_str("::java_spaghetti::ObjectArray<");
+                        buffer.push_str("::java_spaghetti::ObjectArray<'env, ");
                         match context.java_to_rust_path(class, mod_) {
                             Ok(path) => buffer.push_str(path.as_str()),
                             Err(_) => {
@@ -258,8 +261,10 @@ impl<'a> Method<'a> {
                                 buffer.push_str("???");
                             }
                         }
+                        buffer.push_str("<'env>");
                         buffer.push_str(", ");
                         buffer.push_str(&context.throwable_rust_path(mod_));
+                        buffer.push_str("<'env>");
                         buffer.push('>');
                     }
                     method::BasicType::Void => {
@@ -271,6 +276,7 @@ impl<'a> Method<'a> {
                     // ObjectArray s
                     buffer.push_str(", ");
                     buffer.push_str(&context.throwable_rust_path(mod_));
+                    buffer.push_str("<'env>");
                     buffer.push('>');
                 }
                 buffer.push_str(">>"); // Local, Option
@@ -325,7 +331,7 @@ impl<'a> Method<'a> {
         }
         writeln!(
             out,
-            "{}{}{}fn {}<'env>({}) -> ::std::result::Result<{}, ::java_spaghetti::Local<'env, {}>> {{",
+            "{}{}{}fn {}({}) -> ::std::result::Result<{}, ::java_spaghetti::Local<'env, {}<'env>>> {{",
             indent,
             attributes,
             access,

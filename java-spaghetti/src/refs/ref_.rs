@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 use jni_sys::jobject;
 
-use crate::{AssignableTo, Env, Global, Local, ObjectAndEnv, ReferenceType};
+use crate::{AssignableTo, Env, Global, LifeCastTo, Local, ObjectAndEnv, ReferenceType};
 
 /// A non-null, [reference](https://www.ibm.com/support/knowledgecenter/en/SSYKE2_8.0.0/com.ibm.java.vm.80.doc/docs/jni_refs.html)
 /// to a Java object (+ [Env]).  This may refer to a [Local](crate::Local), [Global](crate::Global), local [Arg](crate::Arg), etc.
@@ -14,14 +14,14 @@ use crate::{AssignableTo, Env, Global, Local, ObjectAndEnv, ReferenceType};
 /// \*const JNIEnv in thread local storage instead of lugging it around in every Local.  Of course, there's no
 /// guarantee that's actually an *optimization*...
 #[repr(transparent)]
-pub struct Ref<'env, T: ReferenceType> {
+pub struct Ref<'env, T: ReferenceType<'env>> {
     oae: ObjectAndEnv,
     _env: PhantomData<Env<'env>>,
     _class: PhantomData<&'env T>,
 }
 
-impl<'env, T: ReferenceType> Copy for Ref<'env, T> {}
-impl<'env, T: ReferenceType> Clone for Ref<'env, T> {
+impl<'env, T: ReferenceType<'env>> Copy for Ref<'env, T> {}
+impl<'env, T: ReferenceType<'env>> Clone for Ref<'env, T> {
     fn clone(&self) -> Self {
         Self {
             oae: self.oae,
@@ -31,7 +31,7 @@ impl<'env, T: ReferenceType> Clone for Ref<'env, T> {
     }
 }
 
-impl<'env, T: ReferenceType> Ref<'env, T> {
+impl<'env, T: ReferenceType<'env>> Ref<'env, T> {
     pub unsafe fn from_raw(env: Env<'env>, object: jobject) -> Self {
         Self {
             oae: ObjectAndEnv {
@@ -51,7 +51,11 @@ impl<'env, T: ReferenceType> Ref<'env, T> {
         self.oae.object
     }
 
-    pub fn as_global(&self) -> Global<T> {
+    pub fn as_global<S>(&self) -> Global<S>
+    where
+        T: LifeCastTo<'env, 'static, Target = S>,
+        S: ReferenceType<'static>,
+    {
         let env = self.env();
         let jnienv = env.as_raw();
         let object = unsafe { ((**jnienv).v1_2.NewGlobalRef)(jnienv, self.as_raw()) };
@@ -65,7 +69,7 @@ impl<'env, T: ReferenceType> Ref<'env, T> {
         unsafe { Local::from_raw(self.env(), object) }
     }
 
-    pub fn cast<U: ReferenceType>(&self) -> Result<Ref<'env, U>, crate::CastError> {
+    pub fn cast<U: ReferenceType<'env>>(&self) -> Result<Ref<'env, U>, crate::CastError> {
         let env = self.env();
         let jnienv = env.as_raw();
         let class1 = unsafe { ((**jnienv).v1_2.GetObjectClass)(jnienv, self.as_raw()) };
@@ -76,29 +80,29 @@ impl<'env, T: ReferenceType> Ref<'env, T> {
         Ok(unsafe { Ref::from_raw(env, self.as_raw()) })
     }
 
-    pub fn upcast<U: ReferenceType>(&self) -> Ref<'env, U>
+    pub fn upcast<U: ReferenceType<'env>>(&self) -> Ref<'env, U>
     where
-        Self: AssignableTo<U>,
+        T: AssignableTo<'env, U>,
     {
         let env = self.env();
         unsafe { Ref::from_raw(env, self.as_raw()) }
     }
 }
 
-impl<'env, T: ReferenceType> Deref for Ref<'env, T> {
+impl<'env, T: ReferenceType<'env>> Deref for Ref<'env, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         unsafe { &*(&self.oae as *const ObjectAndEnv as *const Self::Target) }
     }
 }
 
-impl<'env, T: ReferenceType + Debug> Debug for Ref<'env, T> {
+impl<'env, T: ReferenceType<'env> + Debug> Debug for Ref<'env, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         (**self).fmt(f)
     }
 }
 
-impl<'env, T: ReferenceType + Display> Display for Ref<'env, T> {
+impl<'env, T: ReferenceType<'env> + Display> Display for Ref<'env, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         (**self).fmt(f)
     }

@@ -51,7 +51,7 @@ impl fmt::Display for CastError {
 }
 
 /// A marker type indicating this is a valid exception type that all exceptions thrown by java should be compatible with
-pub trait ThrowableType: ReferenceType {}
+pub trait ThrowableType<'env>: ReferenceType<'env> {}
 
 /// You should generally not be interacting with this type directly, but it must be public for codegen.
 /// This is hideously unsafe to implement:
@@ -63,15 +63,20 @@ pub trait ThrowableType: ReferenceType {}
 ///     2.3) Do not allow &mut T access.
 ///     2.4) Only allow &T access, which cannot be moved from.
 #[doc(hidden)]
-pub unsafe trait ReferenceType: JniType + 'static {}
+pub unsafe trait ReferenceType<'env>: JniType + Sized {}
 
 /// Marker trait indicating `Self` can be assigned to `T`.
 ///
 /// This is true when `T` is a superclass or superinterface of `Self`.
-pub unsafe trait AssignableTo<T: ReferenceType>: ReferenceType {}
+pub unsafe trait AssignableTo<'env, T: ReferenceType<'env>>: ReferenceType<'env> {}
 
 /// A type is always assignable to itself.
-unsafe impl<T: ReferenceType> AssignableTo<T> for T {}
+unsafe impl<'env, T: ReferenceType<'env>> AssignableTo<'env, T> for T {}
+
+pub unsafe trait LifeCastTo<'a, 'b>: ReferenceType<'a> {
+    type Target: ReferenceType<'b>;
+    // unsafe fn life_cast_to(&self) -> &Self::Target;
+}
 
 #[repr(C)] // Given how frequently we transmute to/from this, we'd better keep a consistent layout.
 #[doc(hidden)] // You should generally not be interacting with this type directly, but it must be public for codegen.
@@ -91,74 +96,75 @@ pub unsafe trait AsArg<T>: Sized {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Null;
 
-unsafe impl<T: ReferenceType, U: AsArg<T>> AsArg<T> for &U {
+unsafe impl<'env, T: ReferenceType<'env>, U: AsArg<T>> AsArg<T> for &U {
     fn as_arg(&self) -> jobject {
         U::as_arg(self)
     }
 }
 
-unsafe impl<T: ReferenceType, U: AsArg<T>> AsArg<T> for &mut U {
+unsafe impl<'env, T: ReferenceType<'env>, U: AsArg<T>> AsArg<T> for &mut U {
     fn as_arg(&self) -> jobject {
         U::as_arg(self)
     }
 }
 
-unsafe impl<T: ReferenceType> AsArg<T> for Null {
+unsafe impl<'env, T: ReferenceType<'env>> AsArg<T> for Null {
     fn as_arg(&self) -> jobject {
         null_mut()
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Ref<'_, U> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Ref<'env, U> {
     fn as_arg(&self) -> jobject {
         self.as_raw()
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<Ref<'_, U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<Ref<'env, U>> {
     fn as_arg(&self) -> jobject {
         self.map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<&Ref<'_, U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<&Ref<'env, U>> {
     fn as_arg(&self) -> jobject {
         self.map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Local<'_, U> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Local<'env, U> {
     fn as_arg(&self) -> jobject {
         self.as_raw()
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<Local<'_, U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<Local<'env, U>> {
     fn as_arg(&self) -> jobject {
         self.as_ref().map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<&Local<'_, U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<&Local<'env, U>> {
     fn as_arg(&self) -> jobject {
         self.map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
-
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Global<U> {
+/*
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>, S> AsArg<T> for Global<U> {
     fn as_arg(&self) -> jobject {
         self.as_raw()
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<Global<U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<Global<U>> {
     fn as_arg(&self) -> jobject {
         self.as_ref().map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
 
-unsafe impl<T: ReferenceType, U: AssignableTo<T>> AsArg<T> for Option<&Global<U>> {
+unsafe impl<'env, T: ReferenceType<'env>, U: AssignableTo<'env, T>> AsArg<T> for Option<&Global<U>> {
     fn as_arg(&self) -> jobject {
         self.map(|r| r.as_raw()).unwrap_or(null_mut())
     }
 }
+*/

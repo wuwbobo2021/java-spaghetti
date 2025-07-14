@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use jni_sys::*;
 
-use crate::{Env, Global, Local, Ref, ReferenceType};
+use crate::{Env, Global, LifeCastTo, Local, Ref, ReferenceType};
 
 /// FFI: Use **Arg\<java::lang::Object\>** instead of jobject.  This represents a (null?) function argument.
 ///
@@ -12,16 +12,18 @@ use crate::{Env, Global, Local, Ref, ReferenceType};
 /// soundness issues, but at least on Android mostly seems to just result in JNI aborting execution for the current
 /// process when calling methods on an instance of the wrong type.
 #[repr(transparent)]
-pub struct Arg<T: ReferenceType> {
+pub struct Arg<'f, T: ReferenceType<'f>> {
     object: jobject,
+    _env: PhantomData<Env<'f>>,
     _class: PhantomData<T>,
 }
 
-impl<T: ReferenceType> Arg<T> {
+impl<'f, T: ReferenceType<'f>> Arg<'f, T> {
     /// **unsafe**:  There's no guarantee the jobject being passed is valid or null, nor any means of checking it.
     pub unsafe fn from_raw(object: jobject) -> Self {
         Self {
             object,
+            _env: PhantomData,
             _class: PhantomData,
         }
     }
@@ -33,7 +35,11 @@ impl<T: ReferenceType> Arg<T> {
     /// **unsafe**:  This assumes the argument belongs to the given Env/VM, which is technically unsound.  However, the
     /// intended use case of immediately converting any Arg s into ArgRef s at the start of a JNI callback,
     /// where Java directly invoked your function with an Env + arguments, is sound.
-    pub unsafe fn into_ref<'env>(self, env: Env<'env>) -> Option<Ref<'env, T>> {
+    pub unsafe fn into_ref<'env, S>(self, env: Env<'env>) -> Option<Ref<'env, S>>
+    where
+        T: LifeCastTo<'f, 'env, Target = S>,
+        S: ReferenceType<'env>,
+    {
         if self.object.is_null() {
             None
         } else {
@@ -44,7 +50,11 @@ impl<T: ReferenceType> Arg<T> {
     /// **unsafe**:  This assumes the argument belongs to the given Env/VM, which is technically unsound.  However, the
     /// intended use case of immediately converting any Arg s into ArgRef s at the start of a JNI callback,
     /// where Java directly invoked your function with an Env + arguments, is sound.
-    pub unsafe fn into_local<'env>(self, env: Env<'env>) -> Option<Local<'env, T>> {
+    pub unsafe fn into_local<'env, S>(self, env: Env<'env>) -> Option<Local<'env, S>>
+    where
+        T: LifeCastTo<'f, 'env, Target = S>,
+        S: ReferenceType<'env>,
+    {
         if self.object.is_null() {
             None
         } else {
@@ -55,7 +65,11 @@ impl<T: ReferenceType> Arg<T> {
     /// **unsafe**:  This assumes the argument belongs to the given Env/VM, which is technically unsound.  However, the
     /// intended use case of immediately converting any Arg s into ArgRef s at the start of a JNI callback,
     /// where Java directly invoked your function with an Env + arguments, is sound.
-    pub unsafe fn into_global(self, env: Env) -> Option<Global<T>> {
+    pub unsafe fn into_global<'env, S>(self, env: Env<'env>) -> Option<Global<S>>
+    where
+        T: LifeCastTo<'f, 'static, Target = S>,
+        S: ReferenceType<'static>,
+    {
         if self.object.is_null() {
             None
         } else {

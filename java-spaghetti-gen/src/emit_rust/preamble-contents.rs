@@ -18,7 +18,7 @@ mod util {
 
     use super::java::lang::{String as JString, Throwable};
 
-    impl fmt::Debug for Throwable {
+    impl<'env> fmt::Debug for Throwable<'env> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             writeln!(f, "java::lang::Throwable")?;
 
@@ -78,9 +78,9 @@ mod util {
         }
     }
 
-    impl JString {
+    impl<'env> JString<'env> {
         /// Create new local string from an Env + AsRef<str>
-        pub fn from_env_str<'env, S: AsRef<str>>(env: Env<'env>, string: S) -> Local<'env, Self> {
+        pub fn from_env_str<S: AsRef<str>>(env: Env<'env>, string: S) -> Local<'env, Self> {
             let chars = string.as_ref().encode_utf16().collect::<Vec<_>>();
 
             let string = unsafe { env.new_string(chars.as_ptr(), chars.len() as jsize) };
@@ -115,11 +115,11 @@ mod util {
     }
 
     // OsString doesn't implement Display, so neither does java::lang::String.
-    impl fmt::Debug for JString {
+    impl<'env> fmt::Debug for JString<'env> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             fmt::Debug::fmt(&self.to_string_lossy(), f) // XXX: Unneccessary alloc?  Shouldn't use lossy here?
         }
     }
 
-    impl ThrowableType for Throwable {}
+    impl<'env> ThrowableType<'env> for Throwable<'env> {}
 }

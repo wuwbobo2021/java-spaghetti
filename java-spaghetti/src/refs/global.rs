@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use jni_sys::*;
 
-use crate::{Env, Local, Ref, ReferenceType, VM};
+use crate::{Env, LifeCastTo, Local, Ref, ReferenceType, VM};
 
 /// A [Global](https://www.ibm.com/support/knowledgecenter/en/SSYKE2_8.0.0/com.ibm.java.vm.80.doc/docs/jni_refs.html),
 /// non-null, reference to a Java object (+ [VM]).
@@ -15,16 +15,16 @@ use crate::{Env, Local, Ref, ReferenceType, VM};
 /// future.  Specifically, on Android, since we're guaranteed to only have a single ambient [VM], we can likely store the
 /// *const JavaVM in static and/or thread local storage instead of lugging it around in every [Local].  Of course, there's
 /// no guarantee that's actually an *optimization*...
-pub struct Global<T: ReferenceType> {
+pub struct Global<T: ReferenceType<'static>> {
     object: jobject,
     vm: VM,
     pd: PhantomData<T>,
 }
 
-unsafe impl<T: ReferenceType> Send for Global<T> {}
-unsafe impl<T: ReferenceType> Sync for Global<T> {}
+unsafe impl<T: ReferenceType<'static>> Send for Global<T> {}
+unsafe impl<T: ReferenceType<'static>> Sync for Global<T> {}
 
-impl<T: ReferenceType> Global<T> {
+impl<T: ReferenceType<'static>> Global<T> {
     pub unsafe fn from_raw(vm: VM, object: jobject) -> Self {
         Self {
             object,
@@ -47,17 +47,25 @@ impl<T: ReferenceType> Global<T> {
         object
     }
 
-    pub fn as_local<'env>(&self, env: Env<'env>) -> Local<'env, T> {
+    pub fn as_local<'env, S>(&self, env: Env<'env>) -> Local<'env, S>
+    where
+        T: LifeCastTo<'static, 'env, Target = S>,
+        S: ReferenceType<'env>,
+    {
         let jnienv = env.as_raw();
         let object = unsafe { ((**jnienv).v1_2.NewLocalRef)(jnienv, self.as_raw()) };
         unsafe { Local::from_raw(env, object) }
     }
 
-    pub fn as_ref<'env>(&'env self, env: Env<'env>) -> Ref<'env, T> {
+    pub fn as_ref<'env, S>(&'env self, env: Env<'env>) -> Ref<'env, S>
+    where
+        T: LifeCastTo<'static, 'env, Target = S>,
+        S: ReferenceType<'env>,
+    {
         unsafe { Ref::from_raw(env, self.object) }
     }
 }
-
+/*
 impl<'env, T: ReferenceType> From<Local<'env, T>> for Global<T> {
     fn from(x: Local<'env, T>) -> Self {
         x.as_global()
@@ -81,8 +89,8 @@ impl<'env, T: ReferenceType> From<&Ref<'env, T>> for Global<T> {
         x.as_global()
     }
 }
-
-impl<T: ReferenceType> Clone for Global<T> {
+*/
+impl<T: ReferenceType<'static>> Clone for Global<T> {
     fn clone(&self) -> Self {
         self.vm.with_env(|env| {
             let env = env.as_raw();
@@ -96,7 +104,7 @@ impl<T: ReferenceType> Clone for Global<T> {
     }
 }
 
-impl<T: ReferenceType> Drop for Global<T> {
+impl<T: ReferenceType<'static>> Drop for Global<T> {
     fn drop(&mut self) {
         self.vm.with_env(|env| {
             let env = env.as_raw();

@@ -286,7 +286,7 @@ impl<'env> Env<'env> {
 
     // Constructor Methods
 
-    pub unsafe fn new_object_a<R: ReferenceType, E: ThrowableType>(
+    pub unsafe fn new_object_a<R: ReferenceType<'env>, E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -305,7 +305,7 @@ impl<'env> Env<'env> {
 
     // Instance Methods
 
-    pub unsafe fn call_object_method_a<R: ReferenceType, E: ThrowableType>(
+    pub unsafe fn call_object_method_a<R: ReferenceType<'env>, E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -323,7 +323,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_boolean_method_a<E: ThrowableType>(
+    pub unsafe fn call_boolean_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -339,7 +339,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_byte_method_a<E: ThrowableType>(
+    pub unsafe fn call_byte_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -355,7 +355,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_char_method_a<E: ThrowableType>(
+    pub unsafe fn call_char_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -371,7 +371,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_short_method_a<E: ThrowableType>(
+    pub unsafe fn call_short_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -387,7 +387,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_int_method_a<E: ThrowableType>(
+    pub unsafe fn call_int_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -403,7 +403,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_long_method_a<E: ThrowableType>(
+    pub unsafe fn call_long_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -419,7 +419,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_float_method_a<E: ThrowableType>(
+    pub unsafe fn call_float_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -435,7 +435,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_double_method_a<E: ThrowableType>(
+    pub unsafe fn call_double_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -451,7 +451,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_void_method_a<E: ThrowableType>(
+    pub unsafe fn call_void_method_a<E: ThrowableType<'env>>(
         self,
         this: jobject,
         method: jmethodID,
@@ -469,7 +469,7 @@ impl<'env> Env<'env> {
 
     // Static Methods
 
-    pub unsafe fn call_static_object_method_a<R: ReferenceType, E: ThrowableType>(
+    pub unsafe fn call_static_object_method_a<R: ReferenceType<'env>, E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -487,7 +487,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_boolean_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_boolean_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -503,7 +503,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_byte_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_byte_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -519,7 +519,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_char_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_char_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -535,7 +535,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_short_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_short_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -551,7 +551,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_int_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_int_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -567,7 +567,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_long_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_long_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -583,7 +583,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_float_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_float_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -599,7 +599,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_double_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_double_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -615,7 +615,7 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub unsafe fn call_static_void_method_a<E: ThrowableType>(
+    pub unsafe fn call_static_void_method_a<E: ThrowableType<'env>>(
         self,
         class: jclass,
         method: jmethodID,
@@ -633,7 +633,11 @@ impl<'env> Env<'env> {
 
     // Instance Fields
 
-    pub unsafe fn get_object_field<R: ReferenceType>(self, this: jobject, field: jfieldID) -> Option<Local<'env, R>> {
+    pub unsafe fn get_object_field<R: ReferenceType<'env>>(
+        self,
+        this: jobject,
+        field: jfieldID,
+    ) -> Option<Local<'env, R>> {
         let result = ((**self.env).v1_2.GetObjectField)(self.env, this, field);
         if result.is_null() {
             None
@@ -675,7 +679,7 @@ impl<'env> Env<'env> {
         ((**self.env).v1_2.GetDoubleField)(self.env, this, field)
     }
 
-    pub unsafe fn set_object_field<R: ReferenceType>(self, this: jobject, field: jfieldID, value: impl AsArg<R>) {
+    pub unsafe fn set_object_field<R: ReferenceType<'env>>(self, this: jobject, field: jfieldID, value: impl AsArg<R>) {
         ((**self.env).v1_2.SetObjectField)(self.env, this, field, value.as_arg());
     }
 
@@ -713,7 +717,7 @@ impl<'env> Env<'env> {
 
     // Static Fields
 
-    pub unsafe fn get_static_object_field<R: ReferenceType>(
+    pub unsafe fn get_static_object_field<R: ReferenceType<'env>>(
         self,
         class: jclass,
         field: jfieldID,
@@ -759,7 +763,7 @@ impl<'env> Env<'env> {
         ((**self.env).v1_2.GetStaticDoubleField)(self.env, class, field)
     }
 
-    pub unsafe fn set_static_object_field<R: ReferenceType>(
+    pub unsafe fn set_static_object_field<R: ReferenceType<'env>>(
         self,
         class: jclass,
         field: jfieldID,
@@ -800,7 +804,7 @@ impl<'env> Env<'env> {
         ((**self.env).v1_2.SetStaticDoubleField)(self.env, class, field, value);
     }
 
-    pub fn throw<T: ReferenceType>(self, throwable: Ref<T>) {
+    pub fn throw<T: ReferenceType<'env>>(self, throwable: Ref<'env, T>) {
         let res = unsafe { ((**self.env).v1_2.Throw)(self.env, throwable.as_raw()) };
         assert_eq!(res, 0);
     }
